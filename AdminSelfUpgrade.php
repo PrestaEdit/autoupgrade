@@ -890,7 +890,13 @@ class AdminSelfUpgrade extends AdminSelfTab
 				));
 		}
 
-		if (Tools14::isSubmit('putUnderMaintenance'))
+		if (Tools14::isSubmit('putUnderMaintenance') && version_compare(_PS_VERSION_, '1.5.0.0', '>='))
+		{
+			foreach (Shop::getCompleteListOfShopsID() as $id_shop)
+				Configuration::updateValue('PS_SHOP_ENABLE', 0, false, null, (int)$id_shop);
+			Configuration::updateGlobalValue('PS_SHOP_ENABLE', 0);
+		}
+		elseif (Tools14::isSubmit('putUnderMaintenance'))
 			Configuration::updateValue('PS_SHOP_ENABLE', 0);
 
 		if (Tools14::isSubmit('customSubmitAutoUpgrade'))
@@ -953,14 +959,14 @@ class AdminSelfUpgrade extends AdminSelfTab
 		$this->next = '';
 
 		if ($this->getConfig('channel') != 'archive' && file_exists($this->getFilePath()) && unlink($this->getFilePath()))
-			$this->nextQuickInfo[] = sprintf('%s removed', $this->getFilePath());
+			$this->nextQuickInfo[] = sprintf($this->l('%s removed'), $this->getFilePath());
 		elseif (is_file($this->getFilePath()))
-			$this->nextQuickInfo[] = '<strong>'.sprintf('Please remove %s by ftp', $this->getFilePath()).'</strong>';
+			$this->nextQuickInfo[] = '<strong>'.sprintf($this->l('Please remove %s by FTP'), $this->getFilePath()).'</strong>';
 
 		if ($this->getConfig('channel') != 'directory' && file_exists($this->latestRootDir) && self::deleteDirectory($this->latestRootDir))
-			$this->nextQuickInfo[] = sprintf('%s removed', $this->latestRootDir);
+			$this->nextQuickInfo[] = sprintf($this->l('%s removed'), $this->latestRootDir);
 		elseif(is_dir($this->latestRootDir))
-			$this->nextQuickInfo[] = '<strong>'.sprintf('Please remove %s by ftp', $this->latestRootDir).'</strong>';
+			$this->nextQuickInfo[] = '<strong>'.sprintf($this->l('Please remove %s by FTP'), $this->latestRootDir).'</strong>';
 	}
 
 	// Simplification of _displayForm original function
@@ -3533,6 +3539,7 @@ class AdminSelfUpgrade extends AdminSelfTab
 					}
 					$views .= preg_replace('#DEFINER=[^\s]+\s#', 'DEFINER=CURRENT_USER ', $schema[0]['Create View']).";\n\n";
 					$written += fwrite($fp, "\n".$views);
+					$ignore_stats_table[] = $schema[0]['View'];
 				}
 				// case table
 				elseif (isset($schema[0]['Table']))
